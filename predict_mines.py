@@ -18,13 +18,15 @@ def predict_safest_cells(latest_games_df, top_k=6):
 
     df_to_use = latest_games_df.copy()
 
-    # Faqat kerakli 24 ta ustunni olamiz
+    # Faqat 24 ta kerakli ustunlar
     feature_columns = [f"cell_{i+1}" for i in range(24)]
     df_to_use = df_to_use[feature_columns]
 
-    avg_row = df_to_use.mean().values.reshape(1, -1)
-    predictions = {}
+    # Har safar oxirgi 5 ta satr o‘rtachasini emas, random 5 ta satrni olaylik:
+    random_sample = df_to_use.sample(n=5, replace=False)
+    avg_row = random_sample.mean().values.reshape(1, -1)
 
+    predictions = {}
     for i in range(24):
         key = f"cell_{i+1}"
         if key in models:
