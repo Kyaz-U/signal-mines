@@ -16,7 +16,7 @@ def predict_safest_cells(latest_games_df, top_k=6):
         print("Kamida 5 ta o‘yinga ehtiyoj bor.")
         return []
 
-    avg_row = latest_games_df.mean().values.reshape(1, -1)
+    avg_row = latest_games_df.drop(columns=["cell25"]).mean().values.reshape(1, -1)
     predictions = {}
 
     for i in range(25):
