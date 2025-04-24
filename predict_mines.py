@@ -11,12 +11,16 @@ if not os.path.exists(model_path):
 
 models = joblib.load(model_path)
 
-def predict_safest_cells(data, top_k=6):
-    avg_row = data.tail(5).mean().drop("bombs_count").values.reshape(1, -1)
+def predict_safest_cells(data, top_k=7):
+    # bombs_count ustunini chiqaramiz
+    if 'bombs_count' in data.columns:
+        data = data.drop(columns=['bombs_count'])
+
+    avg_row = data.tail(5).mean().values.reshape(1, -1)
     predictions = {}
 
     for i in range(25):
-        prob = models[f"cell_{i+1}"].predict_proba(avg_row)[0][1]
+        prob = models[f"cell_{i+1}"].predict_proba(avg_row)[0][0]
         predictions[f"cell_{i+1}"] = prob
 
     safest = sorted(predictions.items(), key=lambda x: x[1], reverse=True)[:top_k]
