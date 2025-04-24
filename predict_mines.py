@@ -3,24 +3,32 @@ import joblib
 import os
 import matplotlib.pyplot as plt
 
-def draw_chart(predictions):
-    plt.figure(figsize=(10, 4))
-    sorted_preds = sorted(predictions.items(), key=lambda x: x[0])
-    keys, vals = zip(*[(k, round(v * 100, 2)) for k, v in sorted_preds])
-    plt.bar(keys, vals)
-    plt.title("Xavfsizlik darajasi (%)")
-    plt.xticks(rotation=90)
-    plt.tight_layout()
-    plt.savefig("chart.png")
+model_path = "models/mines_rf_models.pkl"
+csv_path = "data/mines_data.csv"
+
+if not os.path.exists(model_path):
+    os.system("python train_model.py")
+
+models = joblib.load(model_path)
 
 def predict_safest_cells(data, top_k=6):
-    X = data.drop(columns=["bombs_count"])
-    avg_row = X.tail(5).mean().values.reshape(1, -1)
-    models = joblib.load("models/mines_rf_models.pkl")
-    predictions = {
-        f"cell_{i+1}": models[f"cell_{i+1}"].predict_proba(avg_row)[0][1]
-        for i in range(25)
-    }
-    draw_chart(predictions)
+    avg_row = data.tail(5).mean().drop("bombs_count").values.reshape(1, -1)
+    predictions = {}
+
+    for i in range(25):
+        prob = models[f"cell_{i+1}"].predict_proba(avg_row)[0][1]
+        predictions[f"cell_{i+1}"] = prob
+
     safest = sorted(predictions.items(), key=lambda x: x[1], reverse=True)[:top_k]
+    draw_chart(predictions)
     return [cell for cell, _ in safest]
+
+def draw_chart(predictions):
+    keys = list(predictions.keys())
+    vals = [v * 100 for v in predictions.values()]
+    plt.figure(figsize=(10, 4))
+    plt.bar(keys, vals, color='green')
+    plt.xticks(rotation=90)
+    plt.title("Xavfsizlik darajasi (%)")
+    plt.tight_layout()
+    plt.savefig("chart.png")
