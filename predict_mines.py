@@ -1,26 +1,28 @@
 import pandas as pd
 import numpy as np
 import joblib
+import os
 
-# Model faylini yuklaymiz
+# Model mavjudligini tekshiramiz
+if not os.path.exists("models/mines_rf_models.pkl"):
+    os.system("python train_model.py")
+
+# Modelni yuklaymiz
 models = joblib.load("models/mines_rf_models.pkl")
 
-# Yangi o'yin uchun input: oxirgi o'yin statistikasi (DataFrame holatida)
+# Xavfsiz kataklarni bashorat qilish funksiyasi
 def predict_safest_cells(latest_games_df, top_k=6):
     if latest_games_df.shape[0] < 5:
-        print("Diqqat! Model yaxshi ishlashi uchun kamida 5 ta o'yin kerak.")
+        print("Kamida 5 ta o‘yinga ehtiyoj bor.")
         return []
 
-    # O'rtacha holatni olamiz
     avg_row = latest_games_df.mean().values.reshape(1, -1)
-
-    # Har bir katak uchun xavfsiz ehtimolni hisoblaymiz
     predictions = {}
+
     for i in range(25):
         model = models[f"cell_{i+1}"]
-        prob = model.predict_proba(avg_row)[0][1]  # 1 — xavfsiz bo'lish ehtimoli
+        prob = model.predict_proba(avg_row)[0][1]  # 1 — xavfsizlik ehtimoli
         predictions[f"cell_{i+1}"] = prob
 
-    # Eng yuqori xavfsiz ehtimollik bo'yicha saralaymiz
     safest = sorted(predictions.items(), key=lambda x: x[1], reverse=True)[:top_k]
     return [cell for cell, prob in safest]
