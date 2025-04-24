@@ -18,14 +18,14 @@ def predict_safest_cells(latest_games_df, top_k=6):
 
     df_to_use = latest_games_df.copy()
 
-    # Qo‘shimcha ustun bo‘lsa, tashlab yuboramiz
-    if "cell25" in df_to_use.columns:
-        df_to_use = df_to_use.drop(columns=["cell25"])
+    # Faqat kerakli 24 ta ustunni olamiz
+    feature_columns = [f"cell_{i+1}" for i in range(24)]
+    df_to_use = df_to_use[feature_columns]
 
     avg_row = df_to_use.mean().values.reshape(1, -1)
     predictions = {}
 
-    for i in range(25):
+    for i in range(24):
         key = f"cell_{i+1}"
         if key in models:
             model = models[key]
