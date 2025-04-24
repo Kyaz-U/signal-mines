@@ -1,35 +1,30 @@
 import pandas as pd
-import numpy as np
 import joblib
 import os
+import matplotlib.pyplot as plt
 
-# Model mavjudligini tekshiramiz
 if not os.path.exists("models/mines_rf_models.pkl"):
     os.system("python train_model.py")
 
-# Modelni yuklaymiz
 models = joblib.load("models/mines_rf_models.pkl")
 
-# Eng xavfsiz kataklarni aniqlovchi funksiyani yozamiz
-def predict_safest_cells(latest_games_df, top_k=6):
-    if latest_games_df.shape[0] < 1:
-        print("Kamida 1 ta o‘yinga ehtiyoj bor.")
-        return []
-
-    df_to_use = latest_games_df.tail(1).copy()
-
-    if 'cell25' in df_to_use.columns:
-        df_to_use = df_to_use.drop(columns=["cell25"])
-
-    avg_row = df_to_use.values.reshape(1, -1)
-
+def predict_safest_cells(data, top_k=7):
+    avg_row = data.tail(5).mean().values.reshape(1, -1)
     predictions = {}
     for i in range(25):
-        key = f"cell_{i+1}"
-        if key in models:
-            model = models[key]
-            prob = model.predict_proba(avg_row)[0][1]
-            predictions[key] = prob
-
+        prob = models[f"cell_{i+1}"].predict_proba(avg_row)[0][1]
+        predictions[f"cell_{i+1}"] = prob
     safest = sorted(predictions.items(), key=lambda x: x[1], reverse=True)[:top_k]
-    return [cell for cell, prob in safest]
+    draw_chart(predictions)
+    return [cell for cell, _ in safest]
+
+def draw_chart(predictions):
+    keys = list(predictions.keys())
+    vals = [v * 100 for v in predictions.values()]
+    plt.figure(figsize=(10,4))
+    plt.bar(keys, vals, color='green')
+    plt.xticks(rotation=90)
+    plt.title("Xavfsizlik darajasi (%)")
+    plt.tight_layout()
+    plt.savefig("chart.png")
+    plt.close()
