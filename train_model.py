@@ -3,15 +3,29 @@ from sklearn.ensemble import RandomForestClassifier
 import joblib
 import os
 
-df = pd.read_csv("data/mines_data.csv")
+model_path = "models/mines_rf_models.pkl"
+csv_path = "data/mines_data.csv"
+
+# CSV fayl borligini tekshiramiz
+if not os.path.exists(csv_path):
+    print("❌ data/mines_data.csv topilmadi. Iltimos, avval /bombs orqali ma'lumot kiriting.")
+    exit()
+
+# CSV ni o‘qiymiz
+df = pd.read_csv(csv_path)
+X = df.drop(columns=["bombs_count"]) if "bombs_count" in df.columns else df.copy()
+
+# Modelni yaratamiz
 models = {}
-
 for i in range(25):
-    X = df.drop(columns=[f"cell_{i+1}"])
-    y = df[f"cell_{i+1}"]
+    col = f"cell_{i+1}"
+    y = df[col]
+    X_temp = X.drop(columns=[col])
     model = RandomForestClassifier(n_estimators=100, random_state=42)
-    model.fit(X, y)
-    models[f"cell_{i+1}"] = model
+    model.fit(X_temp, y)
+    models[col] = model
 
-joblib.dump(models, "models/mines_rf_models.pkl")
-print("AI model(lar) muvaffaqiyatli o'qitildi.")
+# Modelni saqlaymiz
+os.makedirs("models", exist_ok=True)
+joblib.dump(models, model_path)
+print(f"✅ Model(lar) yangilandi va '{model_path}' faylga saqlandi.")
