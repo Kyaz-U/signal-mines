@@ -1,0 +1,28 @@
+# train_model.py
+import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
+import joblib
+import os
+
+# Fayl yo‘llari
+data_path = "data/mines_data.csv"
+model_path = "models/mines_rf_models.pkl"
+
+# Ma'lumotni o‘qiymiz
+df = pd.read_csv(data_path)
+X = df.drop(columns=["bombs_count"])
+
+# Model tuzamiz
+models = {}
+for i in range(25):
+    y_cell = X.iloc[:, i]
+    model = RandomForestClassifier(n_estimators=100, random_state=42)
+    model.fit(X.drop(columns=[f"cell_{i+1}"]), y_cell)
+    models[f"cell_{i+1}"] = model
+
+# Papkani yaratamiz, agar mavjud bo‘lmasa
+os.makedirs("models", exist_ok=True)
+
+# Modelni saqlaymiz
+joblib.dump(models, model_path)
+print(f"Modellar '{model_path}' ga saqlandi.")
