@@ -1,3 +1,6 @@
+mport os
+if not os.path.exists("models/mines_rf_models.pkl"):
+    os.system("python train_model.py")
 import telebot
 import pandas as pd
 from predict_mines import predict_safest_cells
