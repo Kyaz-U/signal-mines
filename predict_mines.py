@@ -1,40 +1,41 @@
 import pandas as pd
 import joblib
-import os
 import matplotlib.pyplot as plt
+import os
 
 model_path = "models/mines_rf_models.pkl"
 
-if not os.path.exists(model_path):
-    os.system("python train_model.py")
+def predict_safest_cells(data: pd.DataFrame, top_k: int = 6):
+    if not os.path.exists(model_path):
+        raise FileNotFoundError("Model fayli topilmadi. Avval train_model.py ni ishga tushiring.")
 
-models = joblib.load(model_path)
-
-def predict_safest_cells(data, top_k=6):
-    if "bombs_count" in data.columns:
-        avg_row = data.tail(5).drop("bombs_count", axis=1).mean().values.reshape(1, -1)
-    else:
-        avg_row = data.tail(5).mean().values.reshape(1, -1)
-
+    models = joblib.load(model_path)
+    avg_row = data.tail(5).drop(columns=["bombs_count"]).mean()
     predictions = {}
+
     for i in range(1, 26):
         col = f"cell_{i}"
-        X_input = pd.DataFrame(avg_row).drop(columns=[i-1], axis=1)
-        prob = models[col].predict_proba(X_input)[0][0]  # xavfsizlik ehtimoli
+        input_features = avg_row.drop(labels=[col]).values.reshape(1, -1)
+        prob = models[col].predict_proba(input_features)[0][0]  # xavfsiz ehtimoli
         predictions[col] = prob
 
+    # Top xavfsiz kataklar
     safest = sorted(predictions.items(), key=lambda x: x[1], reverse=True)[:top_k]
+
+    # Grafik chizish
     draw_chart(predictions)
     return [cell for cell, _ in safest]
 
-def draw_chart(predictions):
-    keys = list(predictions.keys())
-    vals = [v * 100 for v in predictions.values()]
-    plt.figure(figsize=(10, 4))
-    plt.bar(keys, vals)
+def draw_chart(predictions: dict):
+    cells = list(predictions.keys())
+    probs = [round(predictions[cell] * 100, 2) for cell in cells]
+
+    plt.figure(figsize=(12, 4))
+    plt.bar(cells, probs)
     plt.xticks(rotation=90)
-    plt.ylabel("%")
-    plt.title("Xavfsizlik darajasi (%)")
+    plt.ylim(0, 100)
+    plt.ylabel("Xavfsizlik darajasi (%)")
+    plt.title("25 ta katak bo‘yicha bashorat")
     plt.tight_layout()
     plt.savefig("chart.png")
     plt.close()
