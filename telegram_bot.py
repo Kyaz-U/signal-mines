@@ -1,17 +1,16 @@
+import os
 import telebot
 import pandas as pd
-import os
-from dotenv import load_dotenv
 from predict_mines import predict_safest_cells
+from dotenv import load_dotenv
 
 # .env faylni yuklaymiz
 load_dotenv()
-
-# Tokenni chaqiramiz
 TOKEN = os.getenv("BOT_TOKEN")
+
 bot = telebot.TeleBot(TOKEN)
 
-# Ma'lumotlarni CSV dan olish
+# CSV dan so‘nggi o‘yinlarni yuklash
 def get_latest_games():
     df = pd.read_csv("data/mines_data.csv")
     return df.drop(columns=["bombs_count"]).tail(30)
@@ -19,19 +18,22 @@ def get_latest_games():
 # /start komandasi
 @bot.message_handler(commands=['start'])
 def welcome(message):
-    bot.send_message(message.chat.id, "Assalomu alaykum! Wersal Mines Signal Botiga xush kelibsiz.\n"
-                                      "Xavfsiz kataklar ro‘yxatini olish uchun /signal ni bosing.")
+    bot.send_message(
+        message.chat.id,
+        "Assalomu alaykum! Wersal Mines Signal Botga xush kelibsiz!\n"
+        "/signal buyrug‘ini yuboring — eng xavfsiz katakchalarni ko‘rish uchun."
+    )
 
 # /signal komandasi
 @bot.message_handler(commands=['signal'])
 def send_signal(message):
     try:
         data = get_latest_games()
-        safest = predict_safest_cells(data, top_k=5)
-        response = "Eng xavfsiz kataklar:\n" + ", ".join(str(cell) for cell, _ in safest)
+        safest = predict_safest_cells(data, top_k=6)
+        response = "Eng xavfsiz kataklar (AI model asosida):\n"
+        response += ", ".join(safest)
         bot.send_message(message.chat.id, response)
     except Exception as e:
         bot.send_message(message.chat.id, f"Xatolik yuz berdi: {e}")
 
-# Botni ishga tushuramiz
 bot.polling()
