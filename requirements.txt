@@ -1,6 +1,6 @@
 pandas
-numpy
-joblib
 scikit-learn
+joblib
+telebot
 python-dotenv
-pyTelegramBotAPI
+matplotlib
