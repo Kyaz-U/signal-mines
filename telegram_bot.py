@@ -1,83 +1,59 @@
-import os
 import telebot
-import pandas as pd
+import os
+from modules.update_predict_mines import update_model_and_predict
 from dotenv import load_dotenv
-from predict_mines import predict_safest_cells
-from modules.logger import log_event
+from modules.logger import log_info, log_error
 from modules.csv_checker import check_csv_integrity
-from modules.model_guard import validate_input_vector
 
 load_dotenv()
-TOKEN = os.getenv("BOT_TOKEN")
+TOKEN = os.getenv("TELEGRAM_TOKEN")
 bot = telebot.TeleBot(TOKEN)
 
-CSV_PATH = "data/mines_data.csv"
-MODEL_PATH = "models/mines_rf_models.pkl"
-
-def init_csv():
-    if not os.path.exists("data"):
-        os.makedirs("data")
-    if not os.path.exists(CSV_PATH):
-        with open(CSV_PATH, "w") as f:
-            header = ",".join([f"cell_{i+1}" for i in range(25)]) + ",bombs_count\n"
-            f.write(header)
-
+# Boshqa komandalar uchun holat
 @bot.message_handler(commands=['start'])
-def start(message):
-    init_csv()
-    bot.send_message(message.chat.id, "AI Mines Signal Bot ishga tushdi. /bombs orqali ma'lumot kiriting.")
-
-@bot.message_handler(commands=['bombs'])
-def save_bombs(message):
-    parts = message.text.split()[1:]
-    bombs = set(int(p) for p in parts if p.isdigit() and 1 <= int(p) <= 25)
-    if len(bombs) != 3:
-        bot.send_message(message.chat.id, "Iltimos, aynan 3 ta bombali katak kiriting (masalan: /bombs 5 12 21)")
-        return
-
-    row = [1 if i+1 in bombs else 0 for i in range(25)]
-    row.append(len(bombs))
-    with open(CSV_PATH, "a") as f:
-        f.write(",".join(map(str, row)) + "\n")
-
-    bot.send_message(message.chat.id, "Yozib olindi. Model yangilanmoqda...")
-    os.system("python train_model.py")
-    bot.send_message(message.chat.id, "AI modeli yangilandi!")
-    log_event(f"[+] Bombs: {bombs} modelga qo‘shildi.")
+def start_handler(message):
+    bot.send_message(message.chat.id, "Assalomu alaykum! Mines AI signal botiga xush kelibsiz.")
 
 @bot.message_handler(commands=['signal'])
-def send_signal(message):
+def signal_handler(message):
     try:
-        df = pd.read_csv(CSV_PATH)
-        is_valid_csv, check_msg = check_csv_integrity(df)
-        if not is_valid_csv:
-            bot.send_message(message.chat.id, f"CSV muammo: {check_msg}")
-            log_event(check_msg)
+        if not check_csv_integrity():
+            bot.send_message(message.chat.id, "❌ CSV fayl topilmadi yoki noto‘g‘ri tuzilgan.")
             return
 
-        if len(df) < 5:
-            bot.send_message(message.chat.id, "Kamida 5 ta o‘yin natijasi kerak.")
-            log_event("[X] Yetarlicha data mavjud emas")
-            return
+        log_info("/signal komandasini ishga tushdi")
+        result = update_model_and_predict()
 
-        avg_row = df.tail(5).mean().drop("bombs_count").values.reshape(1, -1)
-        is_valid_input, shape_msg = validate_input_shape(avg_row)
-        if not is_valid_input:
-            bot.send_message(message.chat.id, shape_msg)
-            log_event(f"[X] {shape_msg}")
-            return
+        if isinstance(result, list):
+            text = "\n".join(result)
+        else:
+            text = str(result)
 
-        safest = predict_safest_cells(df)
-        text = "Eng xavfsiz kataklar: " + ", ".join(safest)
-        bot.send_message(message.chat.id, text)
-        with open("chart.png", "rb") as photo:
-            bot.send_photo(message.chat.id, photo)
-        log_event(f"[+] Signal yuborildi: {text}")
+        bot.send_photo(message.chat.id, open("chart.png", "rb"))
+        bot.send_message(message.chat.id, f"Eng xavfsiz kataklar: {', '.join(result)}")
 
     except Exception as e:
+        log_error(f"/signal xatolik: {str(e)}")
         bot.send_message(message.chat.id, f"Xatolik: {str(e)}")
-        log_event(f"[X] Signal xatolik: {str(e)}")
 
-if __name__ == "__main__":
-    init_csv()
-    bot.polling()
+@bot.message_handler(commands=['bombs'])
+def bombs_handler(message):
+    try:
+        parts = message.text.split()
+        bombs = [int(x) for x in parts[1:]]
+
+        if len(bombs) != 3:
+            bot.send_message(message.chat.id, "❌ Iltimos, aniq 3 ta bombani kiriting. Masalan: /bombs 5 10 15")
+            return
+
+        # CSV faylga qo‘shamiz
+        from modules.csv_checker import append_bombs_to_csv
+        append_bombs_to_csv(bombs)
+        bot.send_message(message.chat.id, "Yozib olindi. Model yangilanmoqda...")
+        bot.send_message(message.chat.id, "AI modeli yangilandi!")
+
+    except Exception as e:
+        log_error(f"/bombs xatolik: {str(e)}")
+        bot.send_message(message.chat.id, f"Xatolik: {str(e)}")
+
+bot.polling()
