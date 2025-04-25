@@ -1,12 +1,13 @@
 import logging
-from datetime import datetime
 
-# Logger sozlamasi
 logging.basicConfig(
-    filename="log.txt",
+    filename='log.txt',
     level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
+    format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-def log_event(message):
+def log_info(message):
     logging.info(message)
+
+def log_error(message):
+    logging.error(message)
