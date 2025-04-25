@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from predict_mines import predict_safest_cells
 from modules.logger import log_event
 from modules.csv_checker import check_csv_integrity
-from modules.model_guard import validate_input_shape
+from modules.model_guard import validate_input_vector
 
 load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
