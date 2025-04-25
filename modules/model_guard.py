@@ -1,7 +1,7 @@
 def validate_input_vector(X_row, expected_features=25):
     if len(X_row[0]) != expected_features:
-        return False, f"Xato: {len(X_row[0])} ta feature, lekin model {expected_features} ta kutilmoqda."
-    return True, "Input to'g'ri."
+        return False, f"Xatolik: {len(X_row[0])} ta feature, lekin model {expected_features} ta kutmoqda."
+    return True, "Input to‘g‘ri"
 
 
 def safe_predict(model, X_row):
