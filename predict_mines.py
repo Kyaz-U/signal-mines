@@ -2,55 +2,39 @@ import pandas as pd
 import joblib
 import os
 import matplotlib.pyplot as plt
-from modules.logger import log_info, log_error
 from modules.model_guard import validate_all_models
+from modules.logger import log_info, log_error
 
-MODEL_PATH = "models/mines_rf_models.pkl"
+model_path = "models/mines_rf_models-3.pkl"
 
-def load_models():
-    if not os.path.exists(MODEL_PATH):
-        log_error("❌ Model fayli topilmadi. Avval train_model.py ni ishga tushiring.")
-        raise FileNotFoundError("Model mavjud emas")
-    log_info("✅ Model fayli muvaffaqiyatli yuklandi.")
-    return joblib.load(MODEL_PATH)
+if not os.path.exists(model_path):
+    os.system("python train_model.py")
+
+models = joblib.load(model_path)
 
 def predict_safest_cells(data, top_k=6):
-    try:
-        # Oxirgi 5 o'yindan o'rtacha qatordan foydalanamiz
+    if "bombs_count" in data.columns:
         avg_row = data.tail(5).drop("bombs_count", axis=1).mean().values.reshape(1, -1)
+    else:
+        avg_row = data.tail(5).mean().values.reshape(1, -1)
 
-        models = load_models()
-        predictions = validate_all_models(models, avg_row)
+    predictions = validate_all_models(models, avg_row)
+    log_info(f"AI signal tahlil natijalari: {predictions}")
 
-        # Ehtimollar bo‘yicha tartiblab eng xavfsiz kataklarni tanlaymiz
-        safest = sorted(predictions.items(), key=lambda x: x[1], reverse=True)[:top_k]
-        log_info(f"✅ Signal chiqarildi: {safest}")
+    draw_chart(predictions)
 
-        # Grafik chizamiz
-        draw_chart(predictions)
-
-        return [cell for cell, _ in safest]
-    except Exception as e:
-        log_error(f"❌ Signal chiqarishda xatolik: {str(e)}")
-        return [f"Xatolik yuz berdi: {str(e)}"]
+    sorted_cells = sorted(predictions.items(), key=lambda x: x[1], reverse=True)
+    return [cell for cell, _ in sorted_cells[:top_k]]
 
 def draw_chart(predictions):
-    try:
-        keys = list(predictions.keys())
-        vals = [v * 100 for v in predictions.values()]
-        plt.figure(figsize=(12, 5))
-        bars = plt.bar(keys, vals, color='green')
-        plt.xticks(rotation=90)
-        plt.ylabel("Xavfsizlik darajasi (%)")
-        plt.title("AI Premium: 25 ta katak bo‘yicha xavfsizlik bashorati")
-        plt.tight_layout()
+    keys = list(predictions.keys())
+    vals = [v * 100 for v in predictions.values()]
 
-        for bar, val in zip(bars, vals):
-            plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1,
-                     f"{val:.1f}%", ha='center', va='bottom', fontsize=8)
-
-        plt.savefig("chart.png")
-        plt.close()
-        log_info("✅ Grafik saqlandi: chart.png")
-    except Exception as e:
-        log_error(f"❌ Grafik chizishda xatolik: {str(e)}")
+    plt.figure(figsize=(10, 4))
+    plt.bar(keys, vals)
+    plt.xticks(rotation=90)
+    plt.ylabel("Xavfsizlik (%)")
+    plt.title("25 ta katak bo‘yicha bashorat")
+    plt.tight_layout()
+    plt.savefig("chart.png")
+    plt.close()
