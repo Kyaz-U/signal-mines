@@ -1,52 +1,46 @@
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
-import joblib
 import os
+import joblib
+from sklearn.ensemble import RandomForestClassifier
 from modules.logger import log_info, log_error
 
-MODEL_PATH = "models/mines_rf_models.pkl"
-CSV_PATH = "data/mines_data.csv"
+model_path = "models/mines_rf_models-3.pkl"
+csv_path = "data/mines_data.csv"
 
 def train_models():
-    if not os.path.exists(CSV_PATH):
-        log_error("CSV fayli topilmadi. /bombs orqali ma'lumot kiriting.")
-        raise FileNotFoundError("CSV mavjud emas")
+    try:
+        if not os.path.exists(csv_path):
+            log_error("❌ CSV fayl topilmadi.")
+            print("❌ CSV fayl topilmadi.")
+            return
 
-    df = pd.read_csv(CSV_PATH)
-    if df.shape[1] != 26:
-        log_error("CSV ustunlari noto‘g‘ri. 25 + 1 ustun kerak.")
-        raise ValueError("CSV formati noto‘g‘ri")
+        df = pd.read_csv(csv_path)
 
-    X_all = df.drop(columns=["bombs_count"])
+        if "bombs_count" not in df.columns or len(df) < 10:
+            log_error("❌ Ma'lumotlar yetarli emas yoki 'bombs_count' yo'q.")
+            print("❌ Ma'lumotlar yetarli emas.")
+            return
 
-    models = {}
-    for i in range(25):
-        col = f"cell_{i+1}"
-        y = X_all[col]
-        X = X_all.drop(columns=[col])
+        X = df.drop(columns=["bombs_count"])
+        models = {}
 
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        for i in range(25):
+            col = f"cell_{i+1}"
+            y = X[col]
+            X_temp = X.drop(columns=[col])
 
-        model = RandomForestClassifier(
-            n_estimators=250,
-            max_depth=16,
-            min_samples_split=4,
-            min_samples_leaf=2,
-            random_state=42,
-            class_weight='balanced_subsample'
-        )
-        model.fit(X_train, y_train)
-        preds = model.predict(X_test)
-        acc = accuracy_score(y_test, preds)
+            model = RandomForestClassifier(n_estimators=200, max_depth=8, random_state=42)
+            model.fit(X_temp, y)
+            models[col] = model
 
-        models[col] = model
-        log_info(f"Model [{col}] aniqligi: {round(acc * 100, 2)}%")
+        os.makedirs("models", exist_ok=True)
+        joblib.dump(models, model_path)
+        log_info("✅ Model muvaffaqiyatli o'qitildi va saqlandi.")
+        print("✅ Model o'qitildi va saqlandi.")
 
-    os.makedirs("models", exist_ok=True)
-    joblib.dump(models, MODEL_PATH)
-    log_info("✅ Barcha AI modellar o‘qitildi va models/mines_rf_models.pkl ga saqlandi.")
+    except Exception as e:
+        log_error(f"❌ Model o'qitishda xatolik: {str(e)}")
+        print(f"❌ Xatolik: {str(e)}")
 
 if __name__ == "__main__":
     train_models()
