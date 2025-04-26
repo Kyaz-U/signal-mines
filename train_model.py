@@ -1,36 +1,43 @@
 import pandas as pd
-import joblib
+import pickle
 from sklearn.ensemble import RandomForestClassifier
+import os
 
-# Fayl manzillari
 CSV_PATH = "data/mines_data.csv"
-MODEL_PATH = "models/mines_rf_models_ultimate.pkl"
+MODEL_PATH = "models/mines_rf_models-ultimate.pkl"
 
 def train_and_save_models():
     try:
-        # CSV faylni yuklab olish
+        if not os.path.exists(CSV_PATH):
+            print("❌ CSV fayli topilmadi.")
+            return
+
+        # CSV faylni o'qish
         data = pd.read_csv(CSV_PATH)
 
-        # X va y ni ajratish
-        X = data.drop(columns=["bombs_count"])
+        if data.empty:
+            print("❌ CSV fayli bo'sh.")
+            return
 
+        X = data.drop(columns=["bombs_count"])
+        y = data["bombs_count"]
+
+        # Har bir katak uchun alohida model yaratamiz
         models = {}
 
-        # Har bir katak (cell_1, cell_2, ...) uchun alohida model yaratish
         for column in X.columns:
-            target = X[column]
-            features = X.drop(columns=[column])
-
             model = RandomForestClassifier(n_estimators=100, random_state=42)
-            model.fit(features, target)
+            model.fit(X.drop(columns=[column]), X[column])
             models[column] = model
 
         # Modellarni saqlash
-        joblib.dump(models, MODEL_PATH)
-        print("\u2705 Barcha modellar muvaffaqiyatli o'qitildi va saqlandi!")
+        with open(MODEL_PATH, "wb") as f:
+            pickle.dump(models, f)
+
+        print("✅ Barcha modelllar muvaffaqiyatli o'qitildi va saqlandi.")
 
     except Exception as e:
-        print(f"\u274C Xatolik yuz berdi: {str(e)}")
+        print(f"❌ Model o'qitish jarayonida xatolik: {str(e)}")
 
 if __name__ == "__main__":
     train_and_save_models()
