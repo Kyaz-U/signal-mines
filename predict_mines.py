@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from modules.model_guard import validate_all_models
 from modules.logger import log_info, log_error
 
-MODEL_PATH = "models/mines_rf_models-3.pkl"
+MODEL_PATH = "models/mines_rf_models-ultimate.pkl"
 CSV_PATH = "data/mines_data.csv"
 CHART_PATH = "data/chart.png"
 
