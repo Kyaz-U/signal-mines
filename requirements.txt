@@ -1,5 +1,6 @@
 scikit-learn==1.2.2
-pandas
-matplotlib
-telebot
-python-dotenv
+numpy==1.23.5
+pandas==1.5.3
+python-telegram-bot==13.15
+python-dotenv==1.0.1
+matplotlib==3.7.1
