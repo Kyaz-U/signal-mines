@@ -1,41 +1,38 @@
 import pandas as pd
-import joblib
+import pickle
+import os
 from modules.model_guard import validate_all_models
 
 CSV_PATH = "data/mines_data.csv"
 MODEL_PATH = "models/mines_rf_models-ultimate.pkl"
 
-
-def load_model(model_path=MODEL_PATH):
+def predict_safest_cells():
     try:
-        models = joblib.load(model_path)
-        return models
+        if not os.path.exists(CSV_PATH):
+            return "CSV fayli topilmadi."
+
+        if not os.path.exists(MODEL_PATH):
+            return "Model fayli topilmadi."
+
+        # CSV fayldan oxirgi ma'lumotni olish
+        data = pd.read_csv(CSV_PATH)
+        if data.empty:
+            return "CSV fayl bo'sh."
+
+        last_row = data.iloc[-1, :-1].values.reshape(1, -1)
+
+        # Modelni yuklab olish
+        with open(MODEL_PATH, "rb") as f:
+            models = pickle.load(f)
+
+        # Modellar bilan bashorat qilish
+        results = validate_all_models(models, last_row)
+
+        # Eng xavfsiz kataklarni tartiblash
+        sorted_cells = sorted(results.items(), key=lambda x: x[1], reverse=True)
+        safest_cells = [cell for cell, prob in sorted_cells[:7]]
+
+        return safest_cells
+
     except Exception as e:
-        raise Exception(f"Modelni yuklashda xatolik: {str(e)}")
-
-
-def prepare_input(csv_path=CSV_PATH):
-    try:
-        df = pd.read_csv(csv_path)
-        if df.empty:
-            raise Exception("CSV faylda ma'lumot yo'q.")
-        input_row = df.tail(1).drop(columns=["bombs_count"]).values.reshape(1, -1)
-        return input_row
-    except Exception as e:
-        raise Exception(f"CSV faylni tayyorlashda xatolik: {str(e)}")
-
-
-def predict_safe_cells(models, input_row, top_k=7):
-    try:
-        predictions = validate_all_models(models, input_row)
-        sorted_cells = sorted(predictions.items(), key=lambda x: x[1], reverse=True)
-        safe_cells = [cell for cell, _ in sorted_cells[:top_k]]
-        return safe_cells
-    except Exception as e:
-        raise Exception(f"Bashoratda xatolik: {str(e)}")
-
-
-if __name__ == "__main__":
-    models = load_model()
-    input_row = prepare_input()
-    safe_cells = predict_safe_cells(models, input_row)
+        return f"Xatolik yuz berdi: {str(e)}"
