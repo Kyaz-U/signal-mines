@@ -1,46 +1,31 @@
 import pandas as pd
-import os
-import joblib
 from sklearn.ensemble import RandomForestClassifier
-from modules.logger import log_info, log_error
+import pickle
 
-model_path = "models/mines_rf_models-3.pkl"
-csv_path = "data/mines_data.csv"
+# Fayl yo‘llari
+CSV_PATH = "data/mines_data.csv"
+MODEL_PATH = "models/mines_rf_models-ultimate.pkl"
 
-def train_models():
-    try:
-        if not os.path.exists(csv_path):
-            log_error("❌ CSV fayl topilmadi.")
-            print("❌ CSV fayl topilmadi.")
-            return
+# Ma’lumotni yuklash
+data = pd.read_csv(CSV_PATH)
 
-        df = pd.read_csv(csv_path)
+# X va y ajratish
+features = [f"cell_{i}" for i in range(1, 26)]
+X = data[features]
+y = data["bombs_count"]
 
-        if "bombs_count" not in df.columns or len(df) < 10:
-            log_error("❌ Ma'lumotlar yetarli emas yoki 'bombs_count' yo'q.")
-            print("❌ Ma'lumotlar yetarli emas.")
-            return
+# Har bir cell uchun alohida model
+models = {}
 
-        X = df.drop(columns=["bombs_count"])
-        models = {}
+for i in range(1, 26):
+    label = f"cell_{i}"
+    y_cell = data[label]  # Bomb bor/yo‘qligi
+    model = RandomForestClassifier(n_estimators=100, random_state=42)
+    model.fit(X, y_cell)
+    models[label] = model
 
-        for i in range(25):
-            col = f"cell_{i+1}"
-            y = X[col]
-            X_temp = X.drop(columns=[col])
+# Modellarni saqlash
+with open(MODEL_PATH, "wb") as f:
+    pickle.dump(models, f)
 
-            model = RandomForestClassifier(n_estimators=200, max_depth=8, random_state=42)
-            model.fit(X_temp, y)
-            models[col] = model
-
-        os.makedirs("models", exist_ok=True)
-        joblib.dump(models, model_path)
-        log_info("✅ Model muvaffaqiyatli o'qitildi va saqlandi.")
-        print("✅ Model o'qitildi va saqlandi.")
-
-    except Exception as e:
-        log_error(f"❌ Model o'qitishda xatolik: {str(e)}")
-        print(f"❌ Xatolik: {str(e)}")
-
-if __name__ == "__main__":
-    train_models()
+print(f"✅ Barcha 25 ta model '{MODEL_PATH}' ga saqlandi.")
