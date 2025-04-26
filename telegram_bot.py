@@ -1,7 +1,7 @@
 import telebot
 import os
 from dotenv import load_dotenv
-from modules.update_predict_mines import update_model_and_predict
+from modules.update_predict_mines import update_model_and_predict, write_bombs_and_update_model
 from modules.logger import log_info, log_error
 from modules.csv_checker import check_csv_integrity
 
