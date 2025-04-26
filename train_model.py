@@ -1,33 +1,37 @@
+
 import pandas as pd
-import os
 import pickle
 from sklearn.ensemble import RandomForestClassifier
 
-# Fayl yo'llari
-data_path = 'data/mines_data.csv'
-models_dir = 'models'
-model_path = os.path.join(models_dir, 'mines_rf_models-ultimate.pkl')
+# Fayl manzillari
+CSV_PATH = "data/mines_data.csv"
+MODEL_PATH = "models/mines_rf_models-ultimate.pkl"
 
-# Papkani yaratish (agar mavjud bo'lmasa)
-os.makedirs(models_dir, exist_ok=True)
+def train_and_save_models():
+    try:
+        # CSV faylni yuklab olish
+        data = pd.read_csv(CSV_PATH)
 
-# Ma'lumotlarni yuklash
-data = pd.read_csv(data_path)
+        # X va y ni ajratish
+        X = data.drop(columns=["bombs_count"])
+        y = data["bombs_count"]
 
-# X va y ajratish
-X = data.drop(columns=['bombs_count'])
-y = data['bombs_count']
+        # Har bir katak (cell_1, cell_2, ...) uchun alohida model yaratamiz
+        models = {}
 
-# Har bir katak (cell_1, cell_2, ...) uchun alohida model yaratamiz
-models = {}
-for i in range(1, 26):
-    cell_col = f'cell_{i}'
-    model = RandomForestClassifier(n_estimators=100, random_state=42)
-    model.fit(X, data[cell_col])
-    models[cell_col] = model
+        for column in X.columns:
+            model = RandomForestClassifier(n_estimators=100, random_state=42)
+            model.fit(X.drop(columns=[column]), X[column])  # Shu katakdan tashqari hammasini o'qitadi
+            models[column] = model
 
-# Model faylini saqlash
-with open(model_path, 'wb') as f:
-    pickle.dump(models, f)
+        # Modelni saqlash
+        with open(MODEL_PATH, "wb") as f:
+            pickle.dump(models, f)
 
-print("Barcha modellar muvaffaqiyatli saqlandi!")
+        print("✅ Barcha modellar muvaffaqiyatli o'qitildi va saqlandi!")
+
+    except Exception as e:
+        print(f"❌ Xatolik yuz berdi: {str(e)}")
+
+if __name__ == "__main__":
+    train_and_save_models()
