@@ -1,12 +1,12 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-import pickle
+import joblib
 import os
 
 from modules.model_guard import validate_all_models
 from modules.logger import log_info, log_error
 
-MODEL_PATH = "models/mines_rf_models-ultimate.pkl"
+MODEL_PATH = "models/mines_rf_models_ultimate.pkl"
 CSV_PATH = "data/mines_data.csv"
 CHART_PATH = "data/chart.png"
 TOP_K = 7  # eng xavfsiz 7 ta katak
@@ -14,7 +14,7 @@ TOP_K = 7  # eng xavfsiz 7 ta katak
 def draw_chart(predictions):
     try:
         keys = list(predictions.keys())
-        vals = [v * 100 for v in predictions.values()]
+        vals = [y * 100 for y in predictions.values()]
         plt.figure(figsize=(10, 4))
         plt.bar(keys, vals)
         plt.xticks(rotation=90)
@@ -24,24 +24,23 @@ def draw_chart(predictions):
         plt.savefig(CHART_PATH)
         plt.close()
     except Exception as e:
-        log_error(f"Grafik chizishda xatolik: {e}")
+        log_error(f"Grafik chizishda xatolik: {str(e)}")
 
 def predict_safest_cells():
     # Modelni yuklash
     try:
-        with open(MODEL_PATH, 'rb') as f:
-            models = pickle.load(f)
+        models = joblib.load(MODEL_PATH)
     except Exception as e:
         log_error(f"Model faylini yuklashda xatolik: {e}")
         return "Xatolik: Model fayli topilmadi", []
 
-    # CSVni o'qish
+    # CSVni o‘qish
     try:
         df = pd.read_csv(CSV_PATH)
-        avg_row = df.tail(5).mean(numeric_only=True).values.reshape(1, -1)
+        avg_row = df.tail(1).values.reshape(1, -1)
     except Exception as e:
         log_error(f"CSV o‘qishda xatolik: {e}")
-        return "Xatolik: CSV faylida muammo bor", []
+        return "Xatolik: CSV faylida muammo", []
 
     # Bashorat qilish
     try:
