@@ -28,23 +28,26 @@ def draw_chart(predictions):
 def update_model_and_predict():
     try:
         df = pd.read_csv(CSV_PATH)
-        if len(df) < 10:
+        if len(df) < 1:
             raise Exception("Yetarli ma'lumot mavjud emas")
 
-        avg_row = df.tail(5).mean().values.reshape(1, -1)
+        # OXIRGI satrni olish kerak — yangi bombalar yozilgan satrni
+        avg_row = df.tail(1).values.reshape(1, -1)
+
         models = joblib.load(MODEL_PATH)
-
         predictions = validate_all_models(models, avg_row)
-        log_info(f"AI signal tahlil natijalari: {predictions}")
 
+        log_info(f"AI signal tahlil natijalari: {predictions}")
         draw_chart(predictions)
 
         sorted_cells = sorted(predictions.items(), key=lambda x: x[1], reverse=True)
         top_k = 7
         return [cell for cell, _ in sorted_cells[:top_k]]
+
     except FileNotFoundError as e:
         log_error(f"Model yoki CSV fayl topilmadi: {str(e)}")
-        return f"Xatolik: Model yoki ma'lumot fayli topilmadi."
+        return "Xatolik: Model yoki ma'lumot fayli topilmadi."
+
     except Exception as e:
         log_error(f"Bashoratda xatolik: {str(e)}")
         return f"Xatolik: {str(e)}"
