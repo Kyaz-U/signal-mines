@@ -1,4 +1,3 @@
-
 import pandas as pd
 import pickle
 from sklearn.ensemble import RandomForestClassifier
@@ -9,19 +8,17 @@ MODEL_PATH = "models/mines_rf_models-ultimate.pkl"
 
 def train_and_save_models():
     try:
-        # CSV faylni yuklab olish
+        # CSV faylini yuklash
         data = pd.read_csv(CSV_PATH)
 
         # X va y ni ajratish
         X = data.drop(columns=["bombs_count"])
-        y = data["bombs_count"]
 
-        # Har bir katak (cell_1, cell_2, ...) uchun alohida model yaratamiz
         models = {}
 
         for column in X.columns:
             model = RandomForestClassifier(n_estimators=100, random_state=42)
-            model.fit(X.drop(columns=[column]), X[column])  # Shu katakdan tashqari hammasini o'qitadi
+            model.fit(X.drop(columns=[column]), X[column])  # Har bir cell uchun model
             models[column] = model
 
         # Modelni saqlash
@@ -29,7 +26,7 @@ def train_and_save_models():
             pickle.dump(models, f)
 
         print("✅ Barcha modellar muvaffaqiyatli o'qitildi va saqlandi!")
-
+    
     except Exception as e:
         print(f"❌ Xatolik yuz berdi: {str(e)}")
 
