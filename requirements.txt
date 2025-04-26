@@ -1,6 +1,5 @@
 pandas
 scikit-learn
-joblib
 telebot
 python-dotenv
 matplotlib
