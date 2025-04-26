@@ -12,8 +12,7 @@ CHART_PATH = "data/chart.png"
 def draw_chart(predictions):
     try:
         keys = list(predictions.keys())
-        vals = [v * 100 for v in predictions.values()]
-
+        vals = [y * 100 for y in predictions.values()]
         plt.figure(figsize=(10, 4))
         plt.bar(keys, vals)
         plt.xticks(rotation=90)
@@ -31,9 +30,10 @@ def update_model_and_predict():
         if len(df) < 1:
             raise Exception("Yetarli ma'lumot mavjud emas")
 
-        # OXIRGI satrni olish kerak — yangi bombalar yozilgan satrni
+        # Oxirgi satrni olish
         avg_row = df.tail(1).values.reshape(1, -1)
 
+        # Modelni yuklash
         models = joblib.load(MODEL_PATH)
         predictions = validate_all_models(models, avg_row)
 
@@ -45,9 +45,8 @@ def update_model_and_predict():
         return [cell for cell, _ in sorted_cells[:top_k]]
 
     except FileNotFoundError as e:
-        log_error(f"Model yoki CSV fayl topilmadi: {str(e)}")
+        log_error(f"Model yoki CSV fayli topilmadi: {str(e)}")
         return "Xatolik: Model yoki ma'lumot fayli topilmadi."
-
     except Exception as e:
         log_error(f"Bashoratda xatolik: {str(e)}")
         return f"Xatolik: {str(e)}"
@@ -56,26 +55,29 @@ def write_bombs_and_update_model(bomb_cells):
     try:
         df = pd.read_csv(CSV_PATH)
 
-        new_row = {f"cell_{i+1}": 0 for i in range(25)}
+        new_row = {f'cell_{i+1}': 0 for i in range(25)}
         for cell in bomb_cells:
-            new_row[f"cell_{cell}"] = 1
-        new_row["bombs_count"] = len(bomb_cells)
+            new_row[f'cell_{cell}'] = 1
+        new_row['bombs_count'] = len(bomb_cells)
 
         df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
         df.to_csv(CSV_PATH, index=False)
 
-        # Modelni yangilash
-        X = df.drop(columns=["bombs_count"])
+        # Modelni professional tarzda yangilash
+        X_full = df.drop(columns=["bombs_count"])
         models = {}
+
         for i in range(25):
             col = f"cell_{i+1}"
-            y = X[col]
+            X = X_full.drop(columns=[col])
+            y = X_full[col]
             model = RandomForestClassifier(n_estimators=100, random_state=42)
             model.fit(X, y)
             models[col] = model
 
         joblib.dump(models, MODEL_PATH)
         return True, "AI modeli yangilandi!"
+
     except Exception as e:
         log_error(f"Modelni yangilashda xatolik: {str(e)}")
         return False, f"Xatolik: {str(e)}"
