@@ -1,38 +1,46 @@
-import pandas as pd
-import pickle
 import os
-from modules.model_guard import validate_all_models
+import pandas as pd
+import joblib
+from modules.model_guard import validate_all_models  # Agar validatsiya qilish kerak bo'lsa
 
+# Fayl yo'llari
 CSV_PATH = "data/mines_data.csv"
 MODEL_PATH = "models/mines_rf_models-ultimate.pkl"
 
 def predict_safest_cells():
+    """
+    Oxirgi olingan statistikaga asoslanib, eng xavfsiz katakchalarni bashorat qiladi.
+    """
     try:
+        # CSV fayl va model borligini tekshirish
         if not os.path.exists(CSV_PATH):
-            return "CSV fayli topilmadi."
+            return "❌ CSV fayli topilmadi!"
 
         if not os.path.exists(MODEL_PATH):
-            return "Model fayli topilmadi."
+            return "❌ Model fayli topilmadi!"
 
-        # CSV fayldan oxirgi ma'lumotni olish
+        # CSV faylni o'qish
         data = pd.read_csv(CSV_PATH)
         if data.empty:
-            return "CSV fayl bo'sh."
+            return "❌ CSV fayli bo‘sh!"
 
-        last_row = data.iloc[-1, :-1].values.reshape(1, -1)
+        # Eng oxirgi qatorni olish
+        last_row = data.iloc[-1].values.reshape(1, -1)
 
-        # Modelni yuklab olish
-        with open(MODEL_PATH, "rb") as f:
-            models = pickle.load(f)
+        # Modelni yuklash
+        model = joblib.load(MODEL_PATH)
 
-        # Modellar bilan bashorat qilish
-        results = validate_all_models(models, last_row)
+        # Bashorat qilish
+        probabilities = model.predict_proba(last_row)[0]
 
-        # Eng xavfsiz kataklarni tartiblash
-        sorted_cells = sorted(results.items(), key=lambda x: x[1], reverse=True)
-        safest_cells = [cell for cell, prob in sorted_cells[:7]]
+        # 0.5 dan kichik ehtimollikdagi kataklar xavfsiz deb olinadi
+        safe_cells = [i + 1 for i, prob in enumerate(probabilities) if prob < 0.5]
 
-        return safest_cells
+        # Agar xavfsiz kataklar topilmasa
+        if not safe_cells:
+            return "❗️ Xavfsiz kataklar topilmadi."
+
+        return safe_cells
 
     except Exception as e:
-        return f"Xatolik yuz berdi: {str(e)}"
+        return f"❗️ Xatolik yuz berdi: {str(e)}"
