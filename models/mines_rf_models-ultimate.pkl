@@ -1,1 +1,0 @@
-Simulated model content for mines_rf_models-ultimate.pkl
