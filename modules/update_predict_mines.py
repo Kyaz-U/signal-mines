@@ -1,69 +1,58 @@
 import os
 import pandas as pd
 import joblib
-from modules.model_guard import validate_all_models
+import matplotlib.pyplot as plt
 
 # Fayl yo'llari
 CSV_PATH = "data/mines_data.csv"
 MODEL_PATH = "models/mines_rf_models-ultimate.pkl"
-CHART_PATH = "data/chart.png"  # Agar grafik kerak bo'lsa
+CHART_PATH = "data/chart.png"
 
 def update_model_and_predict():
-    """
-    Model va CSV fayl asosida bashorat qiladi va eng xavfsiz kataklarni aniqlaydi.
-    """
     try:
-        # CSV va model fayllari mavjudligini tekshirish
-        if not os.path.exists(CSV_PATH) or not os.path.exists(MODEL_PATH):
-            return "❌ CSV yoki Model fayli topilmadi."
+        if not os.path.exists(CSV_PATH):
+            return "❌ CSV fayli topilmadi!"
+        if not os.path.exists(MODEL_PATH):
+            return "❌ Model fayli topilmadi!"
 
         # CSV faylni o'qish
         data = pd.read_csv(CSV_PATH)
         if data.empty:
-            return "❌ CSV fayli bo‘sh!"
+            return "❌ CSV fayli bo'sh!"
 
-        # CSV fayldan oxirgi satrni olish
-        last_row = data.iloc[-1, :-1].values.reshape(1, -1)  # oxirgi ustun 'bombs_count' emas
+        # Eng oxirgi qator
+        last_row = data.iloc[-1, :-1].values.reshape(1, -1)
 
-        # Modelni yuklash
+        # Modellarni yuklash
         models = joblib.load(MODEL_PATH)
 
-        # Model bilan bashorat qilish
-        results = validate_all_models(models, last_row)
+        safe_cells = []
 
-        # Eng xavfsiz kataklarni aniqlash
-        sorted_cells = sorted(results.items(), key=lambda x: x[1], reverse=True)
-        safest_cells = [cell for cell, _ in sorted_cells[:7]]  # Eng xavfsiz 6-7 ta katak
+        for cell_name, model in models.items():
+            probability = model.predict_proba(last_row)[0][1]
+            if probability < 0.5:
+                cell_num = int(cell_name.split("_")[1])
+                safe_cells.append((cell_num, probability))
 
-        return safest_cells
+        if not safe_cells:
+            return "❌ Xavfsiz kataklar topilmadi."
 
-    except Exception as e:
-        return f"❗️ Xatolik yuz berdi: {str(e)}"
+        # Eng xavfsiz 6-7 ta katakni olish
+        safe_cells = sorted(safe_cells, key=lambda x: x[1])
+        selected_cells = [cell[0] for cell in safe_cells[:7]]  # 7 ta xavfsiz katak
 
-def write_bombs_and_update_model(bombs):
-    """
-    Yangi bombalar natijasini CSV faylga yozib saqlaydi va modelni yangilashga tayyorlaydi.
-    """
-    try:
-        # Yangi qatorni yaratish
-        row = [0] * 25  # 25 ta katak uchun default qiymat
-        for b in bombs:
-            if 1 <= b <= 25:
-                row[b - 1] = 1  # Bombalar bor joyga 1 qo'yiladi
-        row.append(len(bombs))  # Oxirgi ustunga bombalar sonini yozamiz
+        # Grafik yaratish
+        cells = [f"cell_{i+1}" for i in range(25)]
+        counts = data.iloc[-1, :-1].values
 
-        # DataFrame yaratish
-        columns = [f'cell_{i+1}' for i in range(25)] + ['bombs_count']
-        new_df = pd.DataFrame([row], columns=columns)
+        plt.figure(figsize=(10, 5))
+        plt.bar(cells, counts)
+        plt.xticks(rotation=90)
+        plt.tight_layout()
+        plt.savefig(CHART_PATH)
+        plt.close()
 
-        # CSV faylga qo'shish yoki yangi yaratish
-        if os.path.exists(CSV_PATH):
-            new_df.to_csv(CSV_PATH, mode='a', index=False, header=False)
-        else:
-            os.makedirs(os.path.dirname(CSV_PATH), exist_ok=True)
-            new_df.to_csv(CSV_PATH, index=False)
-
-        print("✅ Bombalar CSV ga saqlandi.")
+        return selected_cells
 
     except Exception as e:
-        print(f"❗️ Bombalarni CSV ga saqlashda xatolik: {str(e)}")
+        return f"❌ Xatolik yuz berdi: {str(e)}"
