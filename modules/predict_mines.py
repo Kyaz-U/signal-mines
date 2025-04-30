@@ -13,34 +13,28 @@ def predict_safest_cells():
         if not os.path.exists(MODEL_PATH):
             return "❌ Model fayli topilmadi!"
 
-        # CSV faylni o'qish
         data = pd.read_csv(CSV_PATH)
         if data.empty:
             return "❌ CSV fayli bo'sh!"
 
         # Eng oxirgi qator
-        last_row = data.iloc[-1, :-1].values.reshape(1, -1)  # Bombs_count emas, cell_1...cell_25
+        last_row = data.iloc[-1:, :-1].values.reshape(1, -1)
 
-        # Modellarni yuklash
-        models = joblib.load(MODEL_PATH)
+        # Modelni yuklash
+        model = joblib.load(MODEL_PATH)
+        probabilities = model.predict_proba(last_row)
 
-        safe_cells = []
-
-        for cell_name, model in models.items():
-            probability = model.predict_proba(last_row)[0][1]  # 1-class ehtimoli
-            if probability < 0.5:
-                # xavfsiz deb baholanadigan cell
-                cell_num = int(cell_name.split("_")[1])
-                safe_cells.append((cell_num, probability))
+        # Har bir katak uchun xavfsizlik ehtimolini olish
+        safe_cells = [(i + 1, p[0]) for i, p in enumerate(probabilities) if p[0] > 0.5]
 
         if not safe_cells:
             return "❌ Xavfsiz kataklar topilmadi."
 
-        # Eng xavfsiz 6-7 ta katakni olish
-        safe_cells = sorted(safe_cells, key=lambda x: x[1])
-        selected_cells = [cell[0] for cell in safe_cells[:7]]  # 7 ta xavfsiz katak
+        # Eng xavfsiz 6-7 ta katak
+        safe_cells = sorted(safe_cells, key=lambda x: -x[1])
+        selected_cells = [str(cell[0]) for cell in safe_cells[:7]]
 
-        return selected_cells
+        return "✅ Xavfsiz kataklar: " + ", ".join(selected_cells)
 
     except Exception as e:
         return f"❌ Xatolik yuz berdi: {str(e)}"
