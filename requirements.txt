@@ -1,6 +1,6 @@
-pandas>=2.0.0
-scikit-learn>=1.2.2
-joblib>=1.2.0
-pytelegrambotapi>=4.9.0
-python-dotenv>=1.0.0
-matplotlib>=3.7.0
+pandas==2.0.3
+scikit-learn==1.2.2
+joblib==1.2.0
+pytelegrambotapi==4.9.0
+python-dotenv==1.0.0
+matplotlib==3.7.1
