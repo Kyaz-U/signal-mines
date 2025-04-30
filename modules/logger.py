@@ -17,7 +17,7 @@ logging.basicConfig(
 )
 
 def log_info(message):
-    """Informatsion log yozish"""
+    """Oddiy informatsion log yozish"""
     logging.info(message)
 
 def log_error(message):
@@ -27,3 +27,7 @@ def log_error(message):
 def log_event(message):
     """Maxsus hodisa logini yozish"""
     logging.info(f"[EVENT] {message}")
+
+def log_warning(message):
+    """Ogohlantirish logini yozish"""
+    logging.warning(message)
