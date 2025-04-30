@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import joblib
 import matplotlib.pyplot as plt
+from modules.train_model import train_and_save_models
 
 # Fayl yo'llari
 CSV_PATH = "data/mines_data.csv"
@@ -15,35 +16,25 @@ def update_model_and_predict():
         if not os.path.exists(MODEL_PATH):
             return "❌ Model fayli topilmadi!"
 
-        # CSV faylni o'qish
         data = pd.read_csv(CSV_PATH)
         if data.empty:
             return "❌ CSV fayli bo'sh!"
 
-        # Eng oxirgi qator
-        last_row = data.iloc[-1, :-1].values.reshape(1, -1)
+        last_row = data.iloc[-1:, :-1].values.reshape(1, -1)
 
-        # Modellarni yuklash
-        models = joblib.load(MODEL_PATH)
+        model = joblib.load(MODEL_PATH)
+        probabilities = model.predict_proba(last_row)
 
-        safe_cells = []
-
-        for cell_name, model in models.items():
-            probability = model.predict_proba(last_row)[0][1]
-            if probability < 0.5:
-                cell_num = int(cell_name.split("_")[1])
-                safe_cells.append((cell_num, probability))
-
+        safe_cells = [(i + 1, p[0]) for i, p in enumerate(probabilities) if p[0] > 0.5]
         if not safe_cells:
             return "❌ Xavfsiz kataklar topilmadi."
 
-        # Eng xavfsiz 6-7 ta katakni olish
-        safe_cells = sorted(safe_cells, key=lambda x: x[1])
-        selected_cells = [cell[0] for cell in safe_cells[:7]]  # 7 ta xavfsiz katak
+        safe_cells = sorted(safe_cells, key=lambda x: -x[1])
+        selected_cells = [str(cell[0]) for cell in safe_cells[:7]]
 
-        # Grafik yaratish
+        # Grafik chizish
         cells = [f"cell_{i+1}" for i in range(25)]
-        counts = data.iloc[-1, :-1].values
+        counts = data.iloc[-1:, :-1].values.flatten()
 
         plt.figure(figsize=(10, 5))
         plt.bar(cells, counts)
@@ -52,7 +43,26 @@ def update_model_and_predict():
         plt.savefig(CHART_PATH)
         plt.close()
 
-        return selected_cells
+        return "✅ Xavfsiz kataklar: " + ", ".join(selected_cells)
 
     except Exception as e:
         return f"❌ Xatolik yuz berdi: {str(e)}"
+
+def write_bombs_and_update_model(bomb_cells):
+    try:
+        if os.path.exists(CSV_PATH):
+            df = pd.read_csv(CSV_PATH)
+        else:
+            df = pd.DataFrame(columns=[f"cell_{i}" for i in range(1, 26)] + ["bombs_count"])
+
+        new_row = [1 if i+1 not in bomb_cells else 0 for i in range(25)]
+        new_row.append(len(bomb_cells))
+        df.loc[len(df)] = new_row
+
+        df.to_csv(CSV_PATH, index=False)
+
+        train_and_save_models()
+        return "✅ Bombalar saqlandi va model yangilandi."
+
+    except Exception as e:
+        return f"❌ Bombalarni saqlashda xatolik yuz berdi: {str(e)}"
